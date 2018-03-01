@@ -1,0 +1,46 @@
+svg.unselect {
+		-webkit-user-select: none;
+		-moz-user-select: none;
+}
+circle.activate {
+	r: 6;
+	stroke: #434343;
+	stroke-width: 3.5px;
+	stroke-opacity: 0.35;
+	transition-duration: 0.2s;
+}
+
+rect.activate {
+	width: 12px;
+	height: 12px;
+	x: -2px;
+	y: -2px;
+	stroke: #434343;
+	stroke-width: 3.5px;
+	stroke-opacity: 0.35;
+	transition-duration: 0.2s;
+}
+
+rect.diActivate {
+	width: 12px;
+	height: 12px;
+	x: -2px;
+	y: -2px;
+	stroke: #434343;
+	stroke-width: 3.5px;
+	stroke-opacity: 0.4;
+	transition-duration: 0.2s;
+}
+
+path.activate {
+	stroke-width: 3.25px;
+}
+
+.softtran {
+	transition-duration: 0.2s;
+}
+
+.floatBox {
+	opacity: 1;
+	transition-duration: 0.2s;
+}

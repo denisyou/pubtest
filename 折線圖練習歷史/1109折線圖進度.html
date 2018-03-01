@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>D3 SR</title>
+	<link rel="stylesheet" type="text/css" href="css/charts.css">
+	
+	<script type="text/javascript" src="D3/d3.v4.min.js"></script>
+	<script type="text/javascript" src="jQuery/jquery-3.2.1.min.js"></script>
+
+</head>
+<body>
+	<script type="text/javascript">
+		// Data Set
+		let categories = ['(219)傷寒論', '(219)金匱要略', '(316)脈經', '(363)肘後備急方', '(536)名醫別錄', '(652)備急千金要方', '(682)千金翼方', '(752)外臺秘要', '(922)太平聖惠方', '(982)醫心方', '(1117)聖濟總錄（四合一本）', '(1117)聖濟總錄（文瑞樓本）', '(1184)衛生家寶產科備要', '(1228)子和醫集', '(1237)婦人良方大全', '(1249)東垣醫集', '(1252)太平惠民和劑局方', '(1358)丹溪醫集', '(1552)名醫類案', '(1557)古今醫統大全', '(1584)赤水玄珠全集', '(1591)遵生八箋', '(1596)本草綱目', '(1770)續名醫類案',''];
+
+		let data = [{name:'桂心(位)', data: [28, 28, 74, 46, 44, 74, 52, 35, 73, 37, 74, 74, 37, 31, 64, 3, 3, 41, 32, 0, 62, 62, 0, 3]}, {name:'陳皮(位)', data: [1, 26, 25, 34, 71, 0, 71, 68, 0, 73, 0, 0, 62, 63, 69, 73, 60, 68, 14, 0, 4, 45, 0, 27]}, {name:'梧桐(位)', data: [74, 73, 72, 31, 72, 35, 40, 32, 28, 32, 32, 40, 58, 55, 27, 40, 51, 73, 0, 0, 57, 41, 28, 3]}, ];
+		
+		let hsvg = 800; // 高度固定 800px
+		let wsvg;		// 寬度彈性縮放 目前從 100% 開始，故不設定
+
+		// svg chartSet
+		let svg = d3.select('body').append('svg')
+					.attr('id', 'chart')
+					.attr('class', 'unselect')
+					.attr('onselectstart','return false;')
+					.attr('unselectable', 'on')
+					.style('height', hsvg+'px')
+					.style('width', '100%')
+					.style('transition-duration', '0.4')
+					.style('display', 'table-cell');
+
+		// $集合
+		let $chart = $('#chart');
+
+		wsvg = $chart.width() * 0.9; // 右側10%留白
+
+		// X & Y Scale 比例尺
+		let xScale = d3.scalePoint()
+						.domain(categories.map(function(d) { return d; }))
+						.rangeRound([0, wsvg]);
+		let xScaleR = d3.scaleLinear()
+						.domain([0, 1000])
+						.range([0, wsvg]);
+		let yScale = d3.scaleLinear().domain([0, 100]).range([(hsvg - 260), 55]);
+
+		// Y Tick
+		for ( let i = 0; i <= 10; i++ ) {
+			svg.append('text').text((i*10)+'')
+				.style('font-size', '20px')
+				.style('font-weight', 'bold')
+				.attr('x', xScaleR(40))
+				.attr('y', yScale(i*10))
+				.style('text-anchor', 'end')
+				.style('cursor', 'default')
+				.attr('class', 'yScaleText');
+		}
+
+		// Axis (此圖只有X軸有)
+		let xAxis = d3.axisBottom(xScale);
+		let bAxis = svg.append('g').call(xAxis)
+						.attr('font-size', '20px')
+						.attr('transform', 'translate('+ xScaleR(45) +', '+ (hsvg - 260) +' )');
+		
+		let bAxisText = bAxis.selectAll('text')
+							.attr('transform', 'translate(20, 5) rotate(315)')
+							.style('text-anchor', 'end')
+							.style('font-weight', 'bold')
+							.style('cursor', 'default')
+							.style('text-overflow', 'clip');
+
+		// 樣式為仿作，所以額外調整屬性
+		// D3 Axis的原理 Path向量做水平線，Line做垂直刻度
+		bAxis.selectAll('line').attr('stroke','#ccd6eb');
+		bAxis.selectAll('path').attr('stroke','#ccd6eb')
+								.attr('d', 'M'+ xScale(categories[0]) +',0H'+ xScale(categories[categories.length-1]));
+
+
+
+		// 圖底格線
+		let gridVertical = svg.selectAll('path.gridV').data(categories).enter().append('path').attr('class', 'gridV')
+							.attr('d', function(d, i) {
+								if ( i != categories.length-1 ) {
+									return 'M '+(xScale(categories[i]))+' '+yScale(100)+' L	 '+(xScale(categories[i]))+' '+yScale(0);
+								}
+							})
+							.attr('fill', 'none')
+							.attr('stroke', '#999')
+							.attr('stroke-width', 2)
+							.attr('stroke-dasharray', '2,6')
+							.attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+
+		for ( let i = 1; i <= 10; i++ ) {
+			svg.append('path').attr('class', 'gridH')
+				.attr('d', 'M 0 '+yScale(i*10)+' H '+(xScale(categories[categories.length-1])))
+				.attr('fill', 'none')
+				.attr('stroke', '#e6e6e6')
+				.attr('storke-width',2)
+				.attr('transform', 'translate('+xScaleR(50)+', 0)');
+		}
+
+		let gridHorizontal = svg.selectAll('path.gridH');
+
+		// 線段與節點繪製
+		let color = ['#7cb5ec', '#434348', '#90ed7d'];
+		let legendType = ['circle', 'rect', 'rect'];
+		// 折線數值配置
+		let varLine = d3.line()
+			.x(function(d, i) { 
+				return xScale(categories[i]); 
+			})
+			.y(function(d) { 
+				return yScale(d); 
+			});
+						
+		
+		// 折線渲染
+		let paths = data.map(function(d, i) {
+			return svg.append('path').attr('id','path'+i).attr('class', 'path'+i)
+						.datum(data[i].data)
+						.attr('d', varLine)
+						.style('fill', 'none')
+						.style('stroke', color[i])
+						.attr('stroke-width', '2px')
+						.attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+		});
+		// 繪製動畫 (以stroke-dashoffset作法)
+		paths.forEach(function(d) {
+			let ntl = d.node().getTotalLength();
+			d.attr('stroke-dasharray', ntl*1.2)
+			  .attr('stroke-dashoffset', ntl*1.2)
+			  .transition()
+		      .duration(2400)
+		      .attr("stroke-dashoffset", 0);
+		});
+
+		// 節點處理
+		let nodeTransform = [	"'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])))+', '+yScale(d)+')'",
+								"'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-0))+', '+( yScale(d)-4)+') rotate(45)'",
+								"'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-4))+', '+(yScale(d)-4)+')'"	];
+		let nodeIdFormat = [	"'nodeC'+i", "'dia'+i", "'rectS'+i" ];
+
+
+//改造預備中
+		let nodeCircle = svg.selectAll('circle').data(data[0].data)
+							.enter().append('circle')
+							.style('fill', color[0])
+							.attr('r', 4)
+							.attr('id', function(d, i){
+								return 'nodeC'+i;
+							}).attr('class', 'nodeC path0')
+							.attr('transform', function(d, i) {
+								return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])))+', '+yScale(d)+')');
+							});
+
+		let nodeDiamond = svg.selectAll('rect.dia').data(data[1].data)
+							.enter().append('rect').attr('class','dia path1')
+							.style('fill', color[1])
+							.attr('width', 8).attr('height', 8)
+							.attr('id', function(d, i){
+								return 'dia'+i;
+							})
+							.attr('transform', function(d, i) {
+								return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-0))+', '+( yScale(d)-4)+') rotate(45)');
+							});
+
+		let nodeSquare = svg.selectAll('rect.square').data(data[2].data)
+							.enter().append('rect').attr('class','square path2')
+							.style('fill', color[2])
+							.attr('width', '8px').attr('height', '8px')
+							.attr('id', function(d, i){
+								return 'rectS'+i;
+							})
+							
+							.attr('transform', function(d, i) {
+								return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-4))+', '+(yScale(d)-4)+')');
+							});	
+							
+			
+		nodeCircle.attr('opacity', '0')
+							.transition().attr('opacity', '1').duration(300).delay(function(d, i) { return 100 * i - (i+2) * 25 });
+		nodeDiamond.attr('opacity', '0')
+							.transition().attr('opacity', '1').duration(300).delay(function(d, i) { return 100 * i - (i+2) * 25 });
+		nodeSquare.attr('opacity', '0')
+							.transition().attr('opacity', '1').duration(300).delay(function(d, i) { return 100 * i - (i+2) * 25 });
+
+		
+
+		// jQuery 數值更新
+		$(document).ready(function() {
+			let xPscale = d3.scaleLinear()
+						.domain([(wsvg * 0.045)+(xScale(categories[1]) * 0.6), xScale(categories[categories.length-1])+(wsvg * 0.045)])
+						.rangeRound([0, categories.length-2]);
+
+			// 介面補完
+			let title = svg.append('text').attr('id', 'title').text('折線圖')
+						.attr('x', xScaleR(535)).attr('y', 25)
+						.style('text-anchor', 'middele').style('font-size', '18px');
+			let yAxisText = svg.append('text').text('值').attr('transform', 'translate('+ xScaleR(15) +', '+ yScale(48) +') rotate(270)');
+			let legendText = data.map((d, i) => {
+				return svg.append('g').attr('id', 'legend'+i);
+			});
+			legendText.forEach((d, i) => {
+				d.append('text').text(data[i].name).attr('x', xScaleR(1073)).attr('y', yScale(33 - i*4))
+							.style('font-size', '12px')
+							.style('cursor', 'pointer')
+							.style('font-weight', 'bold');
+
+				d.append('path').style('fill', 'none').style('stroke', color[i]).attr('stroke-width', '2px').attr('d', 'M'+ xScaleR(1055)+' '+yScale(33.5 - i*4)+'H '+(xScaleR(1070)));
+				switch(i) {
+					case 0:
+						d.append('circle')
+							.style('fill', color[i])
+							.attr('r', 4)
+							.attr('transform', 'translate('+xScaleR(1062.5)+', '+yScale(33.5 - i*4)+')');
+						break;
+					case 1:
+						d.append('rect')
+							.style('fill', color[i])
+							.attr('width', 8).attr('height', 8)
+							.attr('transform', 'translate('+xScaleR(1062.5)+', '+yScale(33.5 - 3)+') rotate(45)');
+						break;
+					case 2:
+						d.append('rect')
+							.style('fill', color[i])
+							.attr('width', '8px').attr('height', '8px')
+							.attr('transform', 'translate('+(xScaleR(1062.5)-4)+', '+yScale(33.5 - 7)+')');	
+						break;
+				}
+			});
+
+
+
+			nodeCircle.attr('class', 'softtran path0');
+			nodeSquare.attr('class', 'softtran path2');
+			nodeDiamond.attr('class', 'softtran path1');
+			gridVertical.attr('class', 'softtran');
+			gridHorizontal.attr('class', 'softtran');
+
+			let legendColorToggle = legendText.map(() => {
+				return true;
+			});
+
+			let floatGroup = svg.append('g').attr('id', 'floatBoxGroup').style('transition-duration', '0.2s');
+			let floatBox = floatGroup.append('path').attr('id', 'floatBox')
+									.style('fill', 'rgba(255, 248, 214, 0.8)')
+									.attr('stroke-width', '2px')
+									.attr('stroke', '#333333')
+									.attr('d',' M 0,0 L 10,-10 H 80 V -70 H -80 V -10 H -10 L 0,0')
+									.style('transition-duration', '0.2s')
+									.attr('opacity', 0);
+			let floatText = floatGroup.append('text').attr('id', 'floatText').attr('font-size', '12px').attr('x', '-72px').attr('y', '-50px').style('transition-duration', '0.2s').style('cursor', 'default');
+			let floatText2 = floatGroup.append('text').attr('id', 'floatText2').attr('font-size', '14px').attr('x', '-52.5px').attr('y', '-25px').style('transition-duration', '0.2s').style('cursor', 'default');
+			let floatText3 = floatGroup.append('text').attr('id', 'floatText3').attr('font-size', '14px').attr('x', '10px').attr('y', '-24px').style('transition-duration', '0.2s').style('cursor', 'default').style('font-weight', 'bold');
+			let floatlegend = floatGroup.append('g').attr('id', 'floatLegend').attr('transition-duration', '0.2s').attr('transform', 'translate(-65, -30)');
+			floatlegend.append('circle').attr('id', 'floatCircle').style('fill', color[0]).attr('r', '7px');
+			floatlegend.append('rect').attr('id', 'floatRect').style('fill', color[2]).attr('width', '12px').attr('height', '12px').attr('transform', 'translate(-5, -5)');
+			floatlegend.append('rect').attr('id', 'floatDia').style('fill', color[1]).attr('width', '10px').attr('height', '10px').attr('transform', 'translate(0, -6)rotate(45)');
+				
+			$(window).resize(function() {
+				// 刷新瀏覽器寬度
+				wsvg = $chart.width() * 0.9;
+				if ( wsvg >= 800 * 0.9 && wsvg <= 1480 * 0.9) {
+					// 刷新X軸比例尺
+					xScale.rangeRound([0, wsvg]);
+					xScaleR.range([0, wsvg]);
+					bAxis.call(xAxis);
+					bAxis.call(xAxis).attr('font-size', '20px')
+									.attr('transform', 'translate('+ xScaleR(45) +', '+ (hsvg - 260) +' )');
+					
+					bAxisText.attr('transform', 'translate(20, 5) rotate(315)')
+							.style('text-anchor', 'end')
+							.style('font-weight', 'bold')
+							.style('cursor', 'default')
+							.style('text-overflow', 'clip');
+					bAxis.selectAll('line').attr('stroke','#ccd6eb');
+					bAxis.selectAll('path').attr('stroke','#ccd6eb')
+						.attr('d', 'M'+ xScale(categories[0]) +',0H'+ xScale(categories[categories.length-1]));
+
+					// 刷新折線設置	
+					varLine.x(function(d, i) { 
+								return xScale(categories[i]); 
+							})
+							.y(function(d) { 
+								return yScale(d); 
+							});
+
+					paths.forEach(function(d) {
+						d.attr('d', varLine).attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)').attr('stroke-dasarray', '0');
+					});
+					
+					// 刷新Y軸數值的X值
+					$('.yScaleText').attr('x', xScaleR(40));
+
+					// 刷新節點位置
+					nodeCircle.attr('transform', function(d, i) {
+						return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])))+', '+yScale(d)+')');
+					});
+					nodeDiamond.attr('transform', function(d, i) {
+						return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-0))+', '+( yScale(d)-4)+') rotate(45)');
+					});
+					nodeSquare.attr('transform', function(d, i) {
+						return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-4))+', '+(yScale(d)-4)+')');
+					});
+
+					gridVertical.attr('d', function(d, i) {
+								if ( i != categories.length-1 ) {
+									return 'M '+(xScale(categories[i]))+' '+yScale(100)+' L	 '+(xScale(categories[i]))+' '+yScale(0);
+								}
+					}).attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+
+					gridHorizontal.attr('d', function(d, i) {
+							return ('d', 'M 0 '+yScale((i+1)*10)+' H '+(xScale(categories[categories.length-1])));
+						}).attr('transform', 'translate('+xScaleR(50)+', 0)');
+
+					xPscale = d3.scaleLinear()
+						.domain([xScaleR(45)+(xScale(categories[1]) * 0.6), xScale(categories[categories.length-1])+xScaleR(45)])
+						.rangeRound([0, categories.length-2]);
+
+					title.attr('x', xScaleR(535));
+					paths.forEach(function(d, i) {
+						d.attr('class', 'softtran path'+i);
+					});
+
+					yAxisText.attr('transform', 'translate('+ xScaleR(15) +', '+ yScale(48) +') rotate(270)');
+
+
+					legendText.forEach((d, i) => {
+						d.select('text').attr('x', xScaleR(1073));
+						d.select('path').attr('d', 'M'+ xScaleR(1055)+' '+yScale(33.5 - i*4)+'H '+(xScaleR(1070)));
+						switch(i) {
+							case 0:
+								d.select('circle').attr('transform', 'translate('+xScaleR(1062.5)+', '+yScale(33.5 - i*4)+')');
+								break;
+							case 1:
+								d.select('rect').attr('transform', 'translate('+xScaleR(1062.5)+', '+yScale(33.5 - 3)+') rotate(45)');
+								break;
+							case 2:
+								d.select('rect').attr('transform', 'translate('+(xScaleR(1062.5)-4)+', '+yScale(33.5 - 7)+')');	
+								break;
+						}
+					});
+		
+				}
+			});
+
+
+			setTimeout(()=> {
+				$chart.on('mousemove', function(event) {
+			
+				let MouseX = event.pageX;	
+				let MouseY = event.pageY; 
+				let activatePath;
+			if ( MouseX > xScale(categories[1]) && MouseX < xScaleR(1050) && MouseY <= (hsvg-240)){
+
+				activatePath = data.map( function(d, i) {
+					if (legendColorToggle[i])
+						return Math.abs(yScale(d.data[xPscale(MouseX)]) - MouseY);
+					else 
+						return 1600;
+				})
+				
+				
+
+				// 觸發線段與節點強調
+
+				switch(Math.min.apply(Math, activatePath)) {
+					
+					case activatePath[0]: 
+						if ( legendColorToggle[0] ) {
+							// 強調效果消除
+							$('rect.diActivate').removeClass('diActivate');
+							$('rect.activate').removeClass('activate');
+							$('circle.activate').removeClass('activate');
+
+							$('#path0').removeClass('activate');
+							$('#path1').removeClass('activate');
+							$('#path2').removeClass('activate');
+
+							$('#path0').addClass('activate');
+							$('#nodeC'+xPscale(MouseX)).addClass('activate');
+							$('#floatBox').addClass('floatBox').attr('stroke', color[0]);
+							$('#floatBoxGroup').attr('transform', 'translate('+(xScale(categories[xPscale(MouseX)])-(-1 * xScale(categories[1]))*1.5)+', '+(yScale(data[0].data[xPscale(MouseX)])-8)+')');
+							floatText.text(categories[xPscale(MouseX)]);
+							floatText2.text(data[0].name+': ');
+							floatText3.text(data[0].data[xPscale(MouseX)]);
+							$('#floatCircle').show();
+							$('#floatDia').hide();
+							$('#floatRect').hide();
+						}
+						break;
+
+					case activatePath[1]:
+						if ( legendColorToggle[1] ) {
+							// 強調效果消除
+							$('rect.diActivate').removeClass('diActivate');
+							$('rect.activate').removeClass('activate');
+							$('circle.activate').removeClass('activate');
+
+							$('#path0').removeClass('activate');
+							$('#path1').removeClass('activate');
+							$('#path2').removeClass('activate');
+							
+							$('#path1').addClass('activate');
+							$('#dia'+xPscale(MouseX)).addClass('diActivate');
+							$('#floatBox').addClass('floatBox').attr('stroke', color[1]);
+							$('#floatBoxGroup').attr('transform', 'translate('+(xScale(categories[xPscale(MouseX)])-(-1 * xScale(categories[1]))*1.5)+', '+(yScale(data[1].data[xPscale(MouseX)])-8)+')');
+							floatText.text(categories[xPscale(MouseX)]);
+							
+							floatText2.text(data[1].name+': ');
+							floatText3.text(data[1].data[xPscale(MouseX)]);
+							$('#floatCircle').hide();
+							$('#floatDia').show();
+							$('#floatRect').hide();
+						break;
+						}
+					case activatePath[2]:
+						if ( legendColorToggle[2] ) {
+							// 強調效果消除
+							$('rect.diActivate').removeClass('diActivate');
+							$('rect.activate').removeClass('activate');
+							$('circle.activate').removeClass('activate');
+
+							$('#path0').removeClass('activate');
+							$('#path1').removeClass('activate');
+							$('#path2').removeClass('activate');
+							
+							$('#path2').addClass('activate');
+							$('#rectS'+xPscale(MouseX)).addClass('activate');
+							$('#floatBox').addClass('floatBox').attr('stroke', color[2]);
+							$('#floatBoxGroup').attr('transform', 'translate('+(xScale(categories[xPscale(MouseX)])-(-1 * xScale(categories[1]))*1.5)+', '+(yScale(data[2].data[xPscale(MouseX)])-8)+')');
+							floatText.text(categories[xPscale(MouseX)]);
+							
+							floatText2.text(data[2].name+': ');
+							floatText3.text(data[2].data[xPscale(MouseX)]);
+							$('#floatCircle').hide();
+							$('#floatDia').hide();
+							$('#floatRect').show();
+						break;
+						}
+
+				}
+			} else {
+				// 強調效果消除
+				$('rect.diActivate').removeClass('diActivate');
+				$('rect.activate').removeClass('activate');
+				$('circle.activate').removeClass('activate');
+
+				$('#path0').removeClass('activate');
+				$('#path1').removeClass('activate');
+				$('#path2').removeClass('activate');
+
+				$('#floatBox').removeClass('floatBox');
+				floatText.text('');
+				floatText2.text('');
+				floatText3.text('');
+				$('#floatCircle').fadeOut();
+				$('#floatDia').fadeOut();
+				$('#floatRect').fadeOut();
+			}
+				});
+				/*
+				if ( MouseX < xScale(categories[categories.length-1])) {
+					$('#floatBox').addClass('floatBox').attr('transform', 'translate('+xPscale(MouseX)+', '+yScale(d)+')');
+				} else {
+					$('#floatBox').removeClass('floatBox');
+				}
+				*/
+				
+					//console.log(MouseX+' '+MouseY);
+				//}).on('mouseout', () => {
+				//	$('#floatBox').removeClass('floatBox');
+				//});
+			}, 1500);
+			
+			legendText.forEach((d, i) => {
+				$('#legend'+i).on('click', () => {
+					$('.path'+i).toggle();
+					legendColorToggle[i] = !legendColorToggle[i];
+					if (!legendColorToggle[i]) {
+						legendText[i].select('text').attr('fill', '#999');
+						legendText[i].select('path').style('stroke', '#999');
+						legendText[i].select(legendType[i]).style('fill', '#999');
+					} else {
+						legendText[i].select('text').attr('fill', '#333333');
+						legendText[i].select('path').style('stroke', color[i]);
+						legendText[i].select(legendType[i]).style('fill', color[i]);
+					}
+					
+				}).on('mouseover', () => {
+					if (!legendColorToggle[i])
+						legendText[i].select('text').attr('fill', '#333333');
+				}).on('mouseout', () => {
+					if (!legendColorToggle[i])
+						legendText[i].select('text').attr('fill', '#999');
+				});
+			});
+			
+
+		});
+		
+	
+	</script>
+
+</body>
+</html>

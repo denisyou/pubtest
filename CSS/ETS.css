@@ -1,0 +1,55 @@
+div.tbrl {
+	height: 50vw;
+	writing-mode: tb-rl;
+}
+
+div.ft {
+	width: 7vw;
+	height: 7vw;
+	background: rgba(173, 247, 255, 0.75);
+	margin: 0.3vw;
+	border: 0.5px dotted gray;
+	border-radius: 15px;
+	float: left;
+	display: inline;
+
+}
+
+div.newline {
+	width: 7vw;
+	height: 7vw;
+	background: rgba(173, 247, 255, 0.75);
+	margin: 0.3vw;
+	border: 0.15px dotted gray;
+	border-radius: 15px;
+	float: left;
+	clear: left;
+}
+
+div.img {
+	width: 7vw;
+	height: 45vw;
+	background: rgba(255, 254, 173, 0.75);
+	margin: 0.3vw;
+	border: 0.5px dotted gray;
+	border-radius: 15px;
+	float: left;
+	clear: left;
+}
+
+img.vertical {
+	width: 7vw;
+	height: 45vw;
+	background: rgba(255, 254, 173, 0.75);
+	margin: 0.3vw;
+	border: 0.5px dotted gray;
+	border-radius: 15px;
+	float: left;
+	clear: left;
+}
+
+text.img {
+	writing-mode: vertical-lr;
+	x: 45px;
+	y: 320px;
+}

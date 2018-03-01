@@ -1,0 +1,45 @@
+/* 橫式框定義 */
+div.tbrl {
+	height: 50vw;
+	writing-mode: tb-rl;
+}
+
+/* 文字塊排版-同行 */
+div.ft {
+	display: inline;
+}
+
+/* 文字塊排版-換行 */
+div.newline {
+	clear: left;
+}
+
+/* 文字塊 & 圖片控制項 */
+div.ft, div.newline, div.img, img.vertical {
+	writing-mode: tb-rl;
+	width: 7vw;
+	margin: 0.3vw;
+	border: 0.5px dotted gray;
+	border-radius: 15px;
+
+}
+
+/* 文字塊控制項 */
+div.ft, div.newline {
+	height: 7vw;
+	background: rgba(173, 247, 255, 0.75);
+	float: left;
+}
+
+/* img控制項 */
+div.img, img.vertical {
+	height: 45vw;
+	background: rgba(255, 254, 173, 0.75);
+	float: left;
+	clear: left;
+}
+
+text.inblock {
+	font-size: 3vw;
+	text-align: center;
+}

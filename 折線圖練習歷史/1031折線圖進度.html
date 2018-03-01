@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>D3 SR</title>
+	<style>
+	svg.unselect {
+		-webkit-user-select: none;
+		-moz-user-select: none;
+	}
+
+	</style>
+	
+	<script type="text/javascript" src="D3/d3.v4.min.js"></script>
+	<script type="text/javascript" src="jQuery/jquery-3.2.1.min.js"></script>
+
+</head>
+<body>
+
+	<script type="text/javascript">
+	
+		// Data Set
+		let categories = ['(219)傷寒論', '(219)金匱要略', '(316)脈經', '(363)肘後備急方', '(536)名醫別錄', '(652)備急千金要方', '(682)千金翼方', '(752)外臺秘要', '(922)太平聖惠方', '(982)醫心方', '(1117)聖濟總錄（四合一本）', '(1117)聖濟總錄（文瑞樓本）', '(1184)衛生家寶產科備要', '(1228)子和醫集', '(1237)婦人良方大全', '(1249)東垣醫集', '(1252)太平惠民和劑局方', '(1358)丹溪醫集', '(1552)名醫類案', '(1557)古今醫統大全', '(1584)赤水玄珠全集', '(1591)遵生八箋', '(1596)本草綱目', '(1770)續名醫類案',''];
+
+		let data = [{name:'桂心(位)', data: [28, 28, 74, 46, 44, 74, 52, 35, 73, 37, 74, 74, 37, 31, 64, 3, 3, 41, 32, 0, 62, 62, 0, 3]}, {name:'陳皮(位)', data: [1, 26, 25, 34, 71, 0, 71, 68, 0, 73, 0, 0, 62, 63, 69, 73, 60, 68, 14, 0, 4, 45, 0, 27]}, {name:'梧桐(位)', data: [74, 73, 72, 31, 72, 35, 40, 32, 28, 32, 32, 40, 58, 55, 27, 40, 51, 73, 0, 0, 57, 41, 28, 3]}, ];
+		
+		let hsvg = 800; // 高度固定 800px
+		let wsvg;		// 寬度彈性縮放 目前從 100% 開始，故不設定
+
+		// svg chartSet
+		let svg = d3.select('body').append('svg')
+					.attr('id', 'chart')
+					.attr('class', 'unselect')
+					.attr('onselectstart','return false;')
+					.attr('unselectable', 'on')
+					.style('height', hsvg+'px')
+					.style('width', '100%')
+					.style('display', 'table-cell');
+		// $集合
+		let $chart = $('#chart');
+
+		wsvg = $chart.width() * 0.9; // 右側10%留白
+
+		let xScale = d3.scalePoint()
+						.domain(categories.map(function(d) { return d; }))
+						.rangeRound([0, wsvg]);
+		let yScale = d3.scaleLinear().domain([0, 100]).range([(hsvg - 260), 55]);
+
+		for ( let i = 0; i <= 10; i++ ) {
+			svg.append('text').text((i*10)+'')
+				.style('font-size', '20px')
+				.style('font-weight', 'bold')
+				.attr('x', wsvg * 0.04)
+				.attr('y', yScale(i*10))
+				.style('text-anchor', 'end')
+				.style('cursor', 'default')
+				.attr('class', 'yScaleText');
+		}
+
+
+
+
+		let xAxis = d3.axisBottom(xScale);
+		let bAxis = svg.append('g').call(xAxis)
+						.attr('font-size', '20px')
+						.attr('transform', 'translate('+ (wsvg * 0.05) +', '+ (hsvg - 260) +' )');
+		
+		let bAxisText = bAxis.selectAll('text')
+							.attr('transform', 'translate(20, 5) rotate(315)')
+							.style('text-anchor', 'end')
+							.style('font-weight', 'bold')
+							.style('cursor', 'default')
+							.style('text-overflow', 'clip');
+
+		// D3 Axis的原理 Path向量做水平線，Line做垂直刻度
+		bAxis.selectAll('line').attr('stroke','#ccd6eb');
+		bAxis.selectAll('path').attr('stroke','#ccd6eb')
+								.attr('d', 'M'+ xScale(categories[0]) +',0H'+ xScale(categories[categories.length-1]));
+
+
+
+		// 圖底格線
+		let gridVertical = svg.selectAll('path.grid').data(categories).enter().append('path').attr('class', 'grid')
+							.attr('d', function(d, i) {
+								if ( i != categories.length-1 ) {
+									return 'M '+(xScale(categories[i]))+' '+yScale(100)+' L	 '+(xScale(categories[i]))+' '+yScale(0);
+								}
+							})
+							.attr('fill', 'none')
+							.attr('stroke', '#999')
+							.attr('stroke-width', 2)
+							.attr('stroke-dasharray', '2,6')
+							.attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+
+		// 折線數值配置
+		let varLine = d3.line()
+			.x(function(d, i) { 
+				return xScale(categories[i]); 
+			})
+			.y(function(d) { 
+				return yScale(d); 
+			});
+						
+		
+		// 折線渲染
+		let color = [ '#7cb5ec', '#434348', '#90ed7d'];
+		let paths = data.map(function(d, i) {
+			return svg.append('path')
+						.datum(data[i].data)
+						.attr('d', varLine)
+						.style('fill', 'none')
+						.style('stroke', color[i])
+						.style('stroke-width', 2)
+						.attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+		});
+
+		paths.forEach(function(d) {
+			let ntl = d.node().getTotalLength();
+			d.attr('stroke-dasharray', ntl)
+			  .attr('stroke-dashoffset', ntl)
+			  .transition()
+		      .duration(2000)
+		      .attr("stroke-dashoffset", 0);
+		});
+		console.log(paths[0].node().getTotalLength());
+
+		// 節點處理
+		let nodeCircle = svg.selectAll('circle').data(data[0].data)
+							.enter().append('circle')
+							.style('fill', color[0])
+							.attr('r', 4)
+							.attr('transform', function(d, i) {
+								return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])))+', '+yScale(d)+')');
+							}).attr('opacity', '0')
+							.transition().attr('opacity', '1').duration(300).delay(function(d, i) { return 100 * i - (i+2) * 25 });	
+
+		let nodeDiamond = svg.selectAll('rect.dia').data(data[1].data)
+							.enter().append('rect').attr('class','dia')
+							.style('fill', color[1])
+							.attr('width', 6).attr('height', 6)
+							.attr('transform', function(d, i) {
+								return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-0))+', '+( yScale(d)-4)+') rotate(45)');
+							}).attr('opacity', '0')
+							.transition().attr('opacity', '1').duration(300).delay(function(d, i) { return 100 * i - (i+2) * 25 });
+
+		let nodeSquare = svg.selectAll('rect.square').data(data[2].data)
+							.enter().append('rect').attr('class','square')
+							.style('fill', color[2])
+							.attr('width', 8).attr('height', 8)
+							.attr('transform', function(d, i) {
+								return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-4))+', '+(yScale(d)-4)+')');
+							}).attr('opacity', '0')
+							.transition().attr('opacity', '1').duration(300).delay(function(d, i) { return 100 * i - (i+2) * 25 });	
+			
+		
+
+/*
+
+		// 用於折線動畫的布幕
+		let curtain = svg.append('rect').attr('x', -1 * wsvg * 1.05)
+										.attr('y', -1 * (hsvg - 255))
+										.style('height', (hsvg - 255))
+										.style('width', wsvg)
+										.attr('class', 'curtain')
+										.attr('transform', 'rotate(180)')
+										.style('fill', '#FFF')
+										.transition().style('width', 0).delay(300).duration(2500);
+										*/
+
+		
+
+
+		
+
+		// jQuery 數值更新
+		$(document).ready(function() {
+			$(window).resize(function() {
+				// 刷新瀏覽器寬度
+				wsvg = $chart.width() * 0.9;
+				if ( wsvg >= 800 * 0.9 && wsvg <= 1480 * 0.9) {
+					// 刷新X軸比例尺
+					xScale.rangeRound([0, wsvg]);
+					bAxis.call(xAxis);
+					bAxis.call(xAxis).attr('font-size', '20px')
+									.attr('transform', 'translate('+ (wsvg * 0.05) +', '+ (hsvg - 260) +' )');
+					bAxisText.attr('transform', 'translate(20, 5) rotate(315)')
+							.style('text-anchor', 'end')
+							.style('font-weight', 'bold')
+							.style('cursor', 'default')
+							.style('text-overflow', 'clip');
+					bAxis.selectAll('line').attr('stroke','#ccd6eb');
+					bAxis.selectAll('path').attr('stroke','#ccd6eb')
+						.attr('d', 'M'+ xScale(categories[0]) +',0H'+ xScale(categories[categories.length-1]));
+
+					// 刷新折線設置	
+					varLine.x(function(d, i) { 
+								return xScale(categories[i]); 
+							})
+							.y(function(d) { 
+								return yScale(d); 
+							});
+
+					paths.forEach(function(d) {
+						d.attr('d', varLine).attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+					});
+					
+					// 刷新Y軸數值的X值
+					$('.yScaleText').attr('x', wsvg * 0.04);
+
+					// 刷新節點位置
+					nodeCircle.attr('transform', function(d, i) {
+						return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])))+', '+yScale(d)+')');
+					});
+					nodeDiamond.attr('transform', function(d, i) {
+						return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-0))+', '+( yScale(d)-4)+') rotate(45)');
+					});
+					nodeSquare.attr('transform', function(d, i) {
+						return 'translate('+(xScale(categories[1]) * 1.5-(-1* (xScale(categories[i])-4))+', '+(yScale(d)-4)+')');
+					});
+
+					gridVertical.attr('d', function(d, i) {
+								if ( i != categories.length-1 ) {
+									return 'M '+(xScale(categories[i]))+' '+yScale(100)+' L	 '+(xScale(categories[i]))+' '+yScale(0);
+								}
+					}).attr('transform', 'translate('+ (xScale(categories[1]) * 1.5) +', 0)');
+				}
+			});
+		});
+		
+
+	
+	</script>
+
+</body>
+</html>
